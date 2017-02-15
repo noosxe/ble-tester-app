@@ -5,7 +5,6 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
-import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
@@ -20,10 +19,13 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
-import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Created by noosxe on 2/15/17.
@@ -31,14 +33,18 @@ import java.util.UUID;
 
 public class DeviceActivity extends AppCompatActivity {
 
+    public static BluetoothGatt mBluetoothGatt;
+
     private BluetoothAdapter mBluetoothAdapter;
     private Menu mActionBarMenu;
     private String mAddress;
     private BluetoothDevice mDevice;
-    private BluetoothGatt mBluetoothGatt;
     private ProgressDialog progress;
-
+    private ListView mServicesList;
     private Handler mHandler;
+    private List<BluetoothGattService> mServices = new ArrayList<>();
+
+    private MyArrayAdapter myArrayAdapter;
 
     private boolean mConnected;
 
@@ -50,6 +56,9 @@ public class DeviceActivity extends AppCompatActivity {
         mHandler = new Handler();
 
         Toolbar myToolbar = (Toolbar) findViewById(R.id.action_bar_device);
+
+        myToolbar.setTitle("Device");
+
         setSupportActionBar(myToolbar);
 
         Intent intent = getIntent();
@@ -68,6 +77,20 @@ public class DeviceActivity extends AppCompatActivity {
         progress.setTitle("Connecting");
         progress.setMessage("Connecting to device...");
         progress.setCancelable(false);
+
+        myArrayAdapter = new MyArrayAdapter(this, android.R.layout.simple_list_item_1);
+        mServicesList = (ListView) findViewById(R.id.services_list);
+        mServicesList.setAdapter(myArrayAdapter);
+        mServicesList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                BluetoothGattService service = mServices.get(position);
+
+                Intent intent = new Intent(DeviceActivity.this, ServiceActivity.class);
+                intent.putExtra("service", service.getUuid().toString());
+                startActivity(intent);
+            }
+        });
     }
 
     @Override
@@ -105,6 +128,13 @@ public class DeviceActivity extends AppCompatActivity {
                 Log.d(MainActivity.LOG_TAG, "connected to device");
 
                 mConnected = true;
+                mServices.clear();
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        myArrayAdapter.notifyDataSetChanged();
+                    }
+                });
 
                 gatt.discoverServices();
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
@@ -126,18 +156,16 @@ public class DeviceActivity extends AppCompatActivity {
             super.onServicesDiscovered(gatt, status);
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                List<BluetoothGattService> services = gatt.getServices();
+                mServices = gatt.getServices();
+
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        myArrayAdapter.notifyDataSetChanged();
+                    }
+                });
 
                 Log.d(MainActivity.LOG_TAG, "services discovered");
-
-                BluetoothGattService service = gatt.getService(UUID.fromString("12345678-1234-5678-1234-56789abcdef0"));
-
-                if (service == null) {
-                    Log.e(MainActivity.LOG_TAG, "service is null");
-                    return;
-                }
-
-                BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID.fromString("12345678-1234-5678-1234-56789abcdef1"));
             } else {
                 Log.w(MainActivity.LOG_TAG, "onServicesDiscovered received: " + status);
             }
@@ -174,5 +202,22 @@ public class DeviceActivity extends AppCompatActivity {
         }
 
         hideLoadingIndicator();
+    }
+
+    private class MyArrayAdapter extends ArrayAdapter<String> {
+        MyArrayAdapter(Context context, int resource) {
+            super(context, resource);
+        }
+
+        @Override
+        public int getCount() {
+            return mServices.size();
+        }
+
+        @Nullable
+        @Override
+        public String getItem(int position) {
+            return mServices.get(position).getUuid().toString();
+        }
     }
 }
