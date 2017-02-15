@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Ble app</string>
+    <string name="action_scan">Scan</string>
+    <string name="action_stop_scan">Stop</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_disconnect">Disconnect</string>
 </resources>
