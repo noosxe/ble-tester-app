@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
@@ -169,6 +170,13 @@ public class DeviceActivity extends AppCompatActivity {
             } else {
                 Log.w(MainActivity.LOG_TAG, "onServicesDiscovered received: " + status);
             }
+        }
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            super.onCharacteristicRead(gatt, characteristic, status);
+
+            Log.d(MainActivity.LOG_TAG, "characteristic read " + characteristic.getStringValue(0));
         }
     };
 
